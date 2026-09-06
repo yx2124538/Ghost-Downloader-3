@@ -19,7 +19,7 @@ LANGUAGE_FAMILY_FALLBACKS = {
 ASSETS_DIR = REPO / "app" / "assets"
 I18N_DIR = ASSETS_DIR / "i18n"
 QRC_PATH = ASSETS_DIR / "resources.qrc"
-RESOURCES_PY = ASSETS_DIR / "resources.py"
+RESOURCES_RCC = ASSETS_DIR / "resources.rcc"
 
 
 def findTool(name: str) -> str:
@@ -37,7 +37,7 @@ def findSources() -> list[str]:
     sources = []
     for root in ("app", "features"):
         for path in sorted((REPO / root).rglob("*.py")):
-            if path == RESOURCES_PY:
+            if path == RESOURCES_RCC:
                 continue
             sources.append(path.relative_to(REPO).as_posix())
     return sources
@@ -86,8 +86,8 @@ def updateQrcI18n() -> None:
 def buildResources() -> None:
     rcc = findTool("pyside6-rcc")
     subprocess.run([
-        rcc, "-g", "python",
-        "-o", RESOURCES_PY.as_posix(),
+        rcc, "--binary",
+        "-o", RESOURCES_RCC.as_posix(),
         QRC_PATH.as_posix(),
     ], cwd=REPO, check=True)
 
