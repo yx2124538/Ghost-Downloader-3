@@ -31,7 +31,7 @@ class TaskDraft:
     itemsCleared = Signal()
     taskConfirmed = Signal(object, bool)
 
-    def __init__(self, coroutineRunner, featureService, parent=None):
+    def __init__(self, coroutineRunner, featureService):
         self._coroutineRunner = coroutineRunner
         self._featureService = featureService
         self._items: list[DraftItem] = []

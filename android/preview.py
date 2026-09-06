@@ -43,5 +43,5 @@ if __name__ == "__main__":
     setupTouchScrolling(window)
 
     startEngine(taskService, speedMeter, featureService, coroutineRunner)
-    app.aboutToQuit.connect(lambda: stopEngine(taskService, browserService, aria2RpcServer, featureService, coroutineRunner))
+    app.aboutToQuit.connect(lambda: stopEngine(taskService, browserService, aria2RpcServer, featureService, coroutineRunner, speedMeter))
     sys.exit(app.exec())

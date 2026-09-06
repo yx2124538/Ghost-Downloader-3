@@ -25,7 +25,7 @@ JSONRPC_METHOD_NOT_FOUND = -32601
 class Aria2RpcServer:
     taskDraftRequested = Signal(list)
 
-    def __init__(self, coroutineRunner, parse, addTask, parent=None) -> None:
+    def __init__(self, coroutineRunner, parse, addTask) -> None:
         self._coroutineRunner = coroutineRunner
         self._parse = parse
         self._addTask = addTask

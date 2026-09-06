@@ -51,7 +51,7 @@ class MobileMainWindow(QWidget):
         self.addButton = PrimaryToolButton(FluentIcon.ADD, self)
         self.vBoxLayout = QVBoxLayout(self)
 
-        self._draft = TaskDraft(coroutineRunner, featureService, parent=self)
+        self._draft = TaskDraft(coroutineRunner, featureService)
         self._draftDialog = TaskDraftDialog(self._draft, featureService, categoryService, parent=self)
 
         self._initWidget()

@@ -29,7 +29,7 @@ class RuntimeStatus:
 class RuntimeStatusService:
     statusChanged = Signal(object)
 
-    def __init__(self, coroutineRunner, parent=None):
+    def __init__(self, coroutineRunner):
         self._coroutineRunner = coroutineRunner
         self._statuses: dict[str, RuntimeStatus] = {}
         self._workIds: dict[str, str] = {}

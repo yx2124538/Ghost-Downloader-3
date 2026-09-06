@@ -150,7 +150,7 @@ def startApp(application):
     updateService.changed.connect(onUpdateChanged)
     checkUpdateAtStartup(updateService)
 
-    application.aboutToQuit.connect(lambda: stopEngine(taskService, browserService, aria2RpcServer, featureService, coroutineRunner, updateService))
+    application.aboutToQuit.connect(lambda: stopEngine(taskService, browserService, aria2RpcServer, featureService, coroutineRunner, speedMeter, updateService))
 
 
 if __name__ == "__main__":

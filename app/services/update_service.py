@@ -115,7 +115,7 @@ class UpdateInfo:
 class UpdateService:
     changed = Signal(object)
 
-    def __init__(self, coroutineRunner: CoroutineRunner, parent=None):
+    def __init__(self, coroutineRunner: CoroutineRunner):
         self._coroutineRunner = coroutineRunner
         self._infos: dict[str, UpdateInfo] = {}
         self._versionsData: dict = {}

@@ -91,9 +91,10 @@ def checkUpdateAtStartup(updateService):
     updateService.check()
 
 
-def stopEngine(taskService, browserService, aria2RpcServer, featureService, coroutineRunner, updateService=None):
+def stopEngine(taskService, browserService, aria2RpcServer, featureService, coroutineRunner, speedMeter, updateService=None):
     taskService.stop()
     taskService.flush()
+    speedMeter.stop()
     browserService.stop()
     aria2RpcServer.stop()
     featureService.deactivate(coroutineRunner)

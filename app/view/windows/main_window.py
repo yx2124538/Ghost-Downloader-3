@@ -99,7 +99,7 @@ class MainWindow(MSFluentWindow):
 
         self._pages: dict[str, QWidget] = {}
         self._progressToast = None
-        self._draft = TaskDraft(self._coroutineRunner, self._featureService, parent=self)
+        self._draft = TaskDraft(self._coroutineRunner, self._featureService)
         self.searchEdit = SearchLineEdit(self.titleBar)
 
         self._initWidget()
