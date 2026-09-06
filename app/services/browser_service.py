@@ -13,14 +13,13 @@ from secrets import token_urlsafe
 from typing import Any, TYPE_CHECKING
 
 import websockets
-
-from PySide6.QtCore import QObject, QResource, QVersionNumber
-from app.signal import Signal
 from loguru import logger
 
 from app.config.cfg import cfg
 from app.config.constants import LATEST_EXTENSION_VERSION, VERSION
 from app.config.paths import APP_DATA_DIR
+from app.signal import Signal
+from app.update import isNewer
 
 from app.models.task import MergeTaskOptions, PageTaskOptions
 
@@ -30,11 +29,9 @@ if TYPE_CHECKING:
 EXTENSION_UNPACK_DIR = Path(APP_DATA_DIR) / "browser_extension"
 
 
-async def extractBrowserExtension() -> Path:
-    """Extract the embedded CRX resource to APP_DATA_DIR/browser_extension/."""
+async def extractBrowserExtension(loadCrx) -> Path:
     def _extract() -> Path:
-        resource = QResource(":/res/chrome_extension.crx")
-        crxData = bytes(resource.data())
+        crxData = loadCrx()
 
         headerSize = struct.unpack_from("<I", crxData, 8)[0]
         zipOffset = 12 + headerSize
@@ -182,18 +179,18 @@ def toTaskSummary(task: Task) -> dict:
     }
 
 
-class BrowserService(QObject):
+class BrowserService:
     pairRequested = Signal(object)
     taskDraftRequested = Signal(list)
     extensionUpdated = Signal(str)
     connectionChanged = Signal()
     protocolMismatched = Signal()
 
-    def __init__(self, coroutineRunner, taskService, parse, parent=None):
-        super().__init__(parent)
+    def __init__(self, coroutineRunner, taskService, parse, loadCrx):
         self._coroutineRunner = coroutineRunner
         self._taskService = taskService
         self._parse = parse
+        self._loadCrx = loadCrx
         self._serveWorkId: str | None = None
         self._boundPort = 0
         self._sessions: dict[object, BrowserClientSession] = {}
@@ -469,12 +466,11 @@ class BrowserService(QObject):
         })
 
         if (session.installType == "development"
-                and QVersionNumber.fromString(session.extensionVersion)
-                    < QVersionNumber.fromString(LATEST_EXTENSION_VERSION)
+                and isNewer(session.extensionVersion, LATEST_EXTENSION_VERSION)
                 and not self._isUpdatingExtension):
             self._isUpdatingExtension = True
             self._coroutineRunner.submit(
-                extractBrowserExtension(),
+                extractBrowserExtension(self._loadCrx),
                 done=self._onExtensionExtracted,
                 failed=self._onExtensionExtractFailed,
                 session=session,

@@ -125,6 +125,10 @@ def buildArgs() -> list[str]:
 
     nuitka = f'"{sys.executable}" -m nuitka'
 
+    dataArgs = [
+        '--include-data-files=app/assets/resources.rcc=app/assets/resources.rcc',
+    ]
+
     if sys.platform == "win32":
         return [
             nuitka,
@@ -132,6 +136,7 @@ def buildArgs() -> list[str]:
             '--windows-console-mode=attach',
             '--plugin-enable=pyside6',
             *includeArgs,
+            *dataArgs,
             '--assume-yes-for-downloads',
             '--msvc=latest',
             '--windows-icon-from-ico=app/assets/logo.ico',
@@ -152,6 +157,7 @@ def buildArgs() -> list[str]:
             '--standalone',
             '--plugin-enable=pyside6',
             *includeArgs,
+            *dataArgs,
             '--static-libpython=no',
             "--macos-create-app-bundle",
             "--assume-yes-for-downloads",
@@ -169,6 +175,7 @@ def buildArgs() -> list[str]:
         '--standalone',
         '--plugin-enable=pyside6',
         *includeArgs,
+        *dataArgs,
         '--include-qt-plugins=platforms',
         '--include-module=PySide6.QtDBus',
         '--assume-yes-for-downloads',

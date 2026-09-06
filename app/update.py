@@ -3,17 +3,32 @@ from __future__ import annotations
 import platform
 import sys
 
-from PySide6.QtCore import QVersionNumber
-
 from app.sources import Release, ReleaseAsset, Repo, fetchLatestRelease, probeDownloadUrl
 
 APP_REPO = Repo("XiaoYouChR/Ghost-Downloader-3", mirrors={"gitcode": "XiaoYouChR/Ghost-Downloader-3"})
 
 
+def parseVersion(s: str) -> tuple[int, ...]:
+    segments: list[int] = []
+    acc, hasDigit = 0, False
+    for ch in s.lstrip("vV"):
+        if ch.isdigit():
+            acc = acc * 10 + int(ch)
+            hasDigit = True
+        elif ch == "." and hasDigit:
+            segments.append(acc)
+            acc, hasDigit = 0, False
+        else:
+            break
+    if hasDigit:
+        segments.append(acc)
+    while segments and segments[-1] == 0:
+        segments.pop()
+    return tuple(segments)
+
+
 def isNewer(current: str, latest: str) -> bool:
-    v1 = QVersionNumber.fromString(current.lstrip("vV"))
-    v2 = QVersionNumber.fromString(latest.lstrip("vV"))
-    return v2 > v1
+    return parseVersion(latest) > parseVersion(current)
 
 
 async def fetchRelease() -> Release:

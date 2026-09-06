@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from PySide6.QtCore import QVersionNumber
 from loguru import logger
 
 from app.client import buildClient, fetchFile
@@ -101,6 +100,8 @@ class Release:
 
 
 async def fetchLatestRelease(repo: Repo) -> Release:
+    from app.update import parseVersion
+
     async def attempt(source):
         endpoints = SOURCES[source]
         url = f"{endpoints.api}/{repo.nameOn(source)}/releases/latest"
@@ -127,9 +128,7 @@ async def fetchLatestRelease(repo: Repo) -> Release:
         if chosen is None:
             chosen = result
             continue
-        if QVersionNumber.fromString(result.version.lstrip("vV")) > QVersionNumber.fromString(
-            chosen.version.lstrip("vV")
-        ):
+        if parseVersion(result.version) > parseVersion(chosen.version):
             chosen = result
     if chosen is None:
         raise TaskError("无法获取 {name} 的最新 release", name=repo.name)

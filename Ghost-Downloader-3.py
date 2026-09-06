@@ -41,7 +41,6 @@ def setupEnvironment():
         if mimetypes._db is None:
             mimetypes._db = mimetypes.MimeTypes()
 
-    import app.assets.resources  # noqa: F401
     from app.view.qfw_patch import patchFluentLabelThemeChanged, patchStackedWidgetAnimation
     from app.view.components.labels import IconBodyLabel
     patchFluentLabelThemeChanged()

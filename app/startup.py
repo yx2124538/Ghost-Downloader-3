@@ -24,7 +24,10 @@ def loadEngine(application):
     from app.services.coroutine_runner import CoroutineRunner
     from app.services.speed_meter import SpeedMeter
 
-    import app.assets.resources  # noqa: F401
+    from PySide6.QtCore import QResource
+    from app.config.paths import executableDir
+
+    QResource.registerResource(str(executableDir / "app" / "assets" / "resources.rcc"))
 
     loadTranslators(application)
 
@@ -50,7 +53,11 @@ def createServices(coroutineRunner, categoryService, speedMeter):
     taskService = TaskService(coroutineRunner, categoryService, speedMeter, fileWatcher)
     runtimeStatusService = RuntimeStatusService(coroutineRunner)
     featureService = FeatureService(taskService, categoryService, coroutineRunner, runtimeStatusService)
-    browserService = BrowserService(coroutineRunner, taskService, parse=featureService.parse)
+    def loadCrx():
+        from PySide6.QtCore import QResource
+        return bytes(QResource(":/res/chrome_extension.crx").data())
+
+    browserService = BrowserService(coroutineRunner, taskService, parse=featureService.parse, loadCrx=loadCrx)
     aria2RpcServer = Aria2RpcServer(coroutineRunner, parse=featureService.parse, addTask=taskService.add)
     updateService = UpdateService(coroutineRunner)
 

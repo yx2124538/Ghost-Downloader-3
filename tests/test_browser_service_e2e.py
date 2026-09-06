@@ -62,7 +62,7 @@ def service(qapp, runner, monkeypatch):
     monkeypatch.setattr(cfg.browserExtensionPairToken, "value", TEST_TOKEN)
     monkeypatch.setattr(cfg.shouldDraftTakenDownload, "value", False)
 
-    svc = BrowserService(runner, StubTaskService(), parse=lambda opts: None, parent=qapp)
+    svc = BrowserService(runner, StubTaskService(), parse=lambda opts: None, loadCrx=lambda: b"")
     yield svc
     svc.stop()
 

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def seedPacks(seedDir: Path, targetDir: Path) -> None:
-    from PySide6.QtCore import QVersionNumber
+    from app.update import parseVersion
 
     if not seedDir.exists() or seedDir.resolve() == targetDir.resolve():
         return
@@ -32,9 +32,7 @@ def seedPacks(seedDir: Path, targetDir: Path) -> None:
         userManifest = PackManifest.fromDir(target) if target.exists() else None
 
         if userManifest is not None and userManifest.version:
-            seedVersion = QVersionNumber.fromString(seedManifest.version)
-            userVersion = QVersionNumber.fromString(userManifest.version)
-            if userVersion >= seedVersion:
+            if parseVersion(userManifest.version) >= parseVersion(seedManifest.version):
                 continue
 
         if target.exists():
@@ -44,14 +42,14 @@ def seedPacks(seedDir: Path, targetDir: Path) -> None:
 
 
 def loadPacks(featuresDir: Path, services=None) -> list[FeaturePack]:
-    from PySide6.QtCore import QVersionNumber
     from app.config.constants import VERSION
+    from app.update import parseVersion
 
     if not featuresDir.exists():
         logger.warning("features 目录不存在: {}", featuresDir)
         return []
 
-    appVersion = QVersionNumber.fromString(VERSION)
+    appVersion = parseVersion(VERSION)
 
     manifests = []
     for p in sorted(featuresDir.iterdir()):
@@ -61,8 +59,7 @@ def loadPacks(featuresDir: Path, services=None) -> list[FeaturePack]:
         if m is None:
             continue
         if m.gdMinVersion:
-            required = QVersionNumber.fromString(m.gdMinVersion)
-            if appVersion < required:
+            if appVersion < parseVersion(m.gdMinVersion):
                 logger.warning("跳过 FeaturePack {}：需要 GD ≥ {}，当前 {}", m.name, m.gdMinVersion, VERSION)
                 continue
         manifests.append(m)
