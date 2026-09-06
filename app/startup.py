@@ -38,6 +38,7 @@ def loadEngine(application):
 
 
 def createServices(coroutineRunner, categoryService, speedMeter):
+    from PySide6.QtCore import QFileSystemWatcher
     from app.services.aria2_rpc import Aria2RpcServer
     from app.services.browser_service import BrowserService
     from app.services.feature_service import FeatureService
@@ -45,7 +46,8 @@ def createServices(coroutineRunner, categoryService, speedMeter):
     from app.services.task_service import TaskService
     from app.services.update_service import UpdateService
 
-    taskService = TaskService(coroutineRunner, categoryService, speedMeter)
+    fileWatcher = QFileSystemWatcher()
+    taskService = TaskService(coroutineRunner, categoryService, speedMeter, fileWatcher)
     runtimeStatusService = RuntimeStatusService(coroutineRunner)
     featureService = FeatureService(taskService, categoryService, coroutineRunner, runtimeStatusService)
     browserService = BrowserService(coroutineRunner, taskService, parse=featureService.parse)

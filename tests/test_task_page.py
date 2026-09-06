@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 import pytest
 
 from app.models.task import Task, TaskStep, TaskStatus
+from app.signal import Signal
 
 
 @dataclass(kw_only=True)
@@ -28,25 +29,20 @@ def makeTask(taskId="tsk_1", status=TaskStatus.WAITING):
 
 
 class StubTaskService:
-    def __init__(self):
-        from PySide6.QtCore import Signal, QObject
-        class _Signals(QObject):
-            taskAdded = Signal(object)
-            taskRemoved = Signal(str)
-            taskStarted = Signal(object)
-            taskPaused = Signal(object)
-            taskCompleted = Signal(object)
-            taskFailed = Signal(object)
-            tasksAllCompleted = Signal()
-            queueChanged = Signal()
-            fileDisappeared = Signal(object)
-            fileDeleteDenied = Signal(object)
-            diskSpaceInsufficient = Signal(int, int)
-        self._signals = _Signals()
-        self.tasks = []
+    taskAdded = Signal(object)
+    taskRemoved = Signal(str)
+    taskStarted = Signal(object)
+    taskPaused = Signal(object)
+    taskCompleted = Signal(object)
+    taskFailed = Signal(object)
+    tasksAllCompleted = Signal()
+    queueChanged = Signal()
+    fileDisappeared = Signal(object)
+    fileDeleteDenied = Signal()
+    diskSpaceInsufficient = Signal(int, int)
 
-    def __getattr__(self, name):
-        return getattr(self._signals, name)
+    def __init__(self):
+        self.tasks = []
 
     def runningCount(self):
         return sum(1 for t in self.tasks if t.status == TaskStatus.RUNNING)
@@ -70,15 +66,7 @@ class StubFeatureService:
 
 
 class StubCategoryService:
-    def __init__(self):
-        from PySide6.QtCore import Signal, QObject
-        class _Obj(QObject):
-            categoriesChanged = Signal()
-        self._obj = _Obj()
-
-    @property
-    def categoriesChanged(self):
-        return self._obj.categoriesChanged
+    categoriesChanged = Signal()
 
     def categories(self):
         return []

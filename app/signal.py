@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import weakref
+from typing import Any, Callable
 
 
 class Signal:
-    def __init__(self, *_types):
+    def __init__(self, *_types: type) -> None:
         pass
 
-    def __set_name__(self, owner, name):
+    def __set_name__(self, owner: type, name: str) -> None:
         self._attr = f"_sig_{name}"
 
-    def __get__(self, obj, objtype=None):
+    def __get__(self, obj: Any, objtype: type | None = None) -> Signal | BoundSignal:
         if obj is None:
             return self
         bound = obj.__dict__.get(self._attr)
@@ -23,10 +24,10 @@ class Signal:
 class BoundSignal:
     __slots__ = ("_slots",)
 
-    def __init__(self):
-        self._slots: list = []
+    def __init__(self) -> None:
+        self._slots: list[Callable | weakref.WeakMethod] = []
 
-    def connect(self, slot) -> None:
+    def connect(self, slot: Callable) -> None:
         if hasattr(slot, "__self__") and hasattr(slot, "__func__"):
             try:
                 self._slots.append(weakref.WeakMethod(slot, self._remove))
@@ -35,7 +36,10 @@ class BoundSignal:
                 pass
         self._slots.append(slot)
 
-    def disconnect(self, slot) -> None:
+    def disconnect(self, slot: Callable | None = None) -> None:
+        if slot is None:
+            self._slots.clear()
+            return
         if hasattr(slot, "__self__"):
             for i, s in enumerate(self._slots):
                 if isinstance(s, weakref.WeakMethod) and s() == slot:
@@ -47,7 +51,7 @@ class BoundSignal:
             except ValueError:
                 pass
 
-    def emit(self, *args) -> None:
+    def emit(self, *args: Any) -> None:
         for slot in self._slots[:]:
             if isinstance(slot, weakref.WeakMethod):
                 cb = slot()
@@ -56,7 +60,7 @@ class BoundSignal:
             else:
                 slot(*args)
 
-    def _remove(self, ref) -> None:
+    def _remove(self, ref: weakref.WeakMethod) -> None:
         try:
             self._slots.remove(ref)
         except ValueError:

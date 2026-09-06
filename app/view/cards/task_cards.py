@@ -471,7 +471,7 @@ class MultiFileTaskCard(TaskCard):
         dialog = self.fileSelectDialog(self._task, self._categoryService, self.window())
         try:
             if dialog.exec():
-                self._taskService.applySelection(self._task, dialog.selectedIndexes())
+                self._taskService.updateSelection(self._task, dialog.selectedIndexes())
                 self.refresh(force=True)
         finally:
             dialog.deleteLater()

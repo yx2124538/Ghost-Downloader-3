@@ -730,7 +730,7 @@ class YtDlpTaskCard(MultiFileTaskCard):
         try:
             if dialog.exec():
                 dialog.updateTimeRanges(self._task.files)
-                self._taskService.applySelection(self._task, dialog.selectedIndexes())
+                self._taskService.updateSelection(self._task, dialog.selectedIndexes())
                 self.refresh(force=True)
         finally:
             dialog.deleteLater()

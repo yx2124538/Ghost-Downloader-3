@@ -1,17 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from pathlib import Path
 from shutil import disk_usage
 from typing import TYPE_CHECKING, Callable
 
-from PySide6.QtCore import QFileSystemWatcher, QObject, QTimer, Signal
 from loguru import logger
 
 from app.config.cfg import cfg
 from app.config.paths import APP_DATA_DIR
 from app.platform.filesystem import splitStemExt
+from app.signal import Signal
 
 if TYPE_CHECKING:
     from app.models.task import Task
@@ -131,7 +132,7 @@ class TaskQueue:
         return self._waiting.pop(0) if self._waiting else None
 
 
-class TaskService(QObject):
+class TaskService:
     taskAdded = Signal(object)
     taskRemoved = Signal(str)
     taskStarted = Signal(object)
@@ -142,24 +143,19 @@ class TaskService(QObject):
     queueChanged = Signal()
     fileDisappeared = Signal(object)
     fileDeleteDenied = Signal()
-    diskSpaceInsufficient = Signal("qint64", "qint64")
+    diskSpaceInsufficient = Signal(int, int)
 
-    def __init__(self, coroutineRunner, categoryService, speedMeter, parent=None):
-        super().__init__(parent)
+    def __init__(self, coroutineRunner, categoryService, speedMeter, fileWatcher):
         self._coroutineRunner = coroutineRunner
         self._categoryService = categoryService
         self._speedMeter = speedMeter
         self._store = TaskStore()
         self._queue = TaskQueue()
-        self._fileWatcher = QFileSystemWatcher(self)
+        self._fileWatcher = fileWatcher
         self._watchedPaths: dict[str, str] = {}
         self._fileWatcher.fileChanged.connect(self._onWatchedFileChanged)
         self._hasNotifiedDeleteDenied = False
-
-        self._flushTimer = QTimer(self)
-        self._flushTimer.setSingleShot(True)
-        self._flushTimer.setInterval(200)
-        self._flushTimer.timeout.connect(self._store.flush)
+        self._flushWorkId: str | None = None
 
         cfg.maxTaskNum.valueChanged.connect(self._rebalance)
 
@@ -200,7 +196,7 @@ class TaskService(QObject):
                     task.outputFolder = Path(folder)
         self._deduplicateOutput(task)
         self._store.add(task)
-        self._flushTimer.start()
+        self._flushSoon()
         self.taskAdded.emit(task)
         if not autoStart:
             return
@@ -241,7 +237,7 @@ class TaskService(QObject):
         from app.models.task import TaskStatus
         self._cancelRun(task)
         task.setStatus(TaskStatus.PAUSED)
-        self._flushTimer.start()
+        self._flushSoon()
         self.taskPaused.emit(task)
         self._pump()
 
@@ -253,36 +249,36 @@ class TaskService(QObject):
             self.fileDeleteDenied.emit()
         self._cancelRun(task, finished=task.deleteFiles if canDelete else None)
         self._store.remove(task.taskId)
-        self._flushTimer.start()
+        self._flushSoon()
         self.taskRemoved.emit(task.taskId)
         self._pump()
 
     def redownload(self, task: Task) -> None:
         self._unwatchFile(task)
-        def afterStopped():
+        def onStopped():
             task.deleteFiles()
             task.reset()
-            self._flushTimer.start()
+            self._flushSoon()
             self._schedule(task)
-        self._cancelRun(task, finished=afterStopped)
+        self._cancelRun(task, finished=onStopped)
 
     def edit(self, task: Task, options: dict, newTask: Task | None = None) -> None:
         needsDelete = newTask is not None and not task.canReuseProgress(newTask)
-        def afterStopped():
+        def onStopped():
             if needsDelete:
                 task.deleteFiles()
             if newTask is not None:
                 task.replaceWith(newTask)
             task.setOptions(options)
-            self._flushTimer.start()
+            self._flushSoon()
             self._schedule(task)
-        self._cancelRun(task, finished=afterStopped)
+        self._cancelRun(task, finished=onStopped)
 
     def setCategory(self, task: Task, categoryId: str) -> None:
         task.category = categoryId
-        self._flushTimer.start()
+        self._flushSoon()
 
-    def applySelection(self, task: Task, selectedIndexes: set[int]) -> None:
+    def updateSelection(self, task: Task, selectedIndexes: set[int]) -> None:
         from app.models.task import TaskStatus
 
         selectedSet = set(selectedIndexes)
@@ -294,7 +290,7 @@ class TaskService(QObject):
                 task.completedAt = 0
                 self._unwatchFile(task)
                 self._schedule(task)
-            self._flushTimer.start()
+            self._flushSoon()
 
         isRunningDeselected = False
         if self._queue.isRunning(task.taskId):
@@ -305,10 +301,10 @@ class TaskService(QObject):
                     break
 
         if isRunningDeselected:
-            def afterStopped():
+            def onStopped():
                 apply()
                 self._schedule(task)
-            self._cancelRun(task, finished=afterStopped)
+            self._cancelRun(task, finished=onStopped)
             return
         apply()
 
@@ -347,8 +343,24 @@ class TaskService(QObject):
             self.queueChanged.emit()
 
     def flush(self) -> None:
-        self._flushTimer.stop()
+        if self._flushWorkId is not None:
+            self._coroutineRunner.cancel(self._flushWorkId)
+            self._flushWorkId = None
         self._store.flush()
+
+    def _flushSoon(self) -> None:
+        if self._flushWorkId is not None:
+            self._coroutineRunner.cancel(self._flushWorkId)
+        self._flushWorkId = self._coroutineRunner.submit(
+            self._debouncedFlush(), failed=self._onFlushFailed)
+
+    async def _debouncedFlush(self) -> None:
+        await asyncio.sleep(0.2)
+        self._coroutineRunner.post(self.flush)
+
+    def _onFlushFailed(self, error) -> None:
+        self._flushWorkId = None
+        logger.error("Flush failed: {}", error)
 
     def _schedule(self, task: Task) -> None:
         self._queue.wait(task.taskId)
@@ -406,7 +418,7 @@ class TaskService(QObject):
 
     def _onRunDone(self, task: Task) -> None:
         self._queue.done(task.taskId)
-        self._flushTimer.start()
+        self._flushSoon()
         self.taskCompleted.emit(task)
         if task.hasOutputFile:
             self._watchFile(task)
@@ -416,7 +428,7 @@ class TaskService(QObject):
 
     def _onRunFailed(self, task: Task, error: Exception) -> None:
         self._queue.done(task.taskId)
-        self._flushTimer.start()
+        self._flushSoon()
         self.taskFailed.emit(task)
         self._pump()
         if self._queue.runningCount() == 0:
@@ -441,4 +453,3 @@ class TaskService(QObject):
         task = self._store.taskById(taskId)
         if task is not None:
             self.fileDisappeared.emit(task)
-

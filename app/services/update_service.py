@@ -332,4 +332,4 @@ class UpdateService:
                 if k in ("label", "currentVersion", "latestVersion", "progress", "error")
             })
         self._infos[targetId] = info
-        self.changed.emit(info)
+        self._coroutineRunner.post(self.changed.emit, info)

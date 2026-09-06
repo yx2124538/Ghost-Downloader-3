@@ -112,7 +112,7 @@ class RuntimeStatusService:
                 if current and current.isInstalling and current.progress != step.progress:
                     status = replace(current, progress=step.progress)
                     self._statuses[runtimeId] = status
-                    self.statusChanged.emit(status)
+                    self._coroutineRunner.post(self.statusChanged.emit, status)
 
         await task.run(reportProgress, lambda: asyncio.sleep(0))
 
